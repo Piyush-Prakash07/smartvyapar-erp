@@ -4,6 +4,7 @@ import { ThemeProvider } from './features/theme/ThemeContext';
 import { ThemeToggle } from './features/theme/ThemeToggle';
 import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
+import VerifyEmailPage from './features/auth/VerifyEmailPage';
 import DashboardPage from './features/dashboard/DashboardPage';
 import InvoiceGeneratorPage from './features/invoices/InvoiceGeneratorPage';
 import ItemsPage from './features/items/ItemsPage';
@@ -32,7 +33,9 @@ import type { PurchaseInvoice } from './features/dashboard/types';
 
 function AppContent() {
   const { isAuthenticated, isLoading, user, activeCompany, companies, switchCompany, logout } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [authView, setAuthView] = useState<'login' | 'register' | 'verify-email'>('login');
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string>('');
+  const [loginNotice, setLoginNotice] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'invoice' | 'items' | 'customers' | 'mahajans' | 'khata' | 'daybook' | 'payments' | 'stock'>('dashboard');
   const [loadedInvoiceToPrint, setLoadedInvoiceToPrint] = useState<any | null>(null);
   const [loadedPurchaseInvoiceToPrint, setLoadedPurchaseInvoiceToPrint] = useState<PurchaseInvoice | null>(null);
@@ -65,17 +68,46 @@ function AppContent() {
   }
 
   if (!isAuthenticated) {
-    return authView === 'login' ? (
+    if (authView === 'verify-email') {
+      return (
+        <VerifyEmailPage
+          email={pendingVerificationEmail}
+          onNavigateToLogin={(notice) => {
+            if (notice) setLoginNotice(notice);
+            setAuthView('login');
+          }}
+          onNavigateToRegister={() => {
+            setAuthView('register');
+          }}
+        />
+      );
+    }
+
+    if (authView === 'register') {
+      return (
+        <RegisterPage
+          onNavigateToLogin={(notice) => {
+            if (notice) setLoginNotice(notice);
+            setAuthView('login');
+          }}
+          onNavigateToVerifyEmail={(email) => {
+            setPendingVerificationEmail(email);
+            setAuthView('verify-email');
+          }}
+        />
+      );
+    }
+
+    return (
       <LoginPage
         onNavigateToRegister={() => {
           setAuthView('register');
         }}
-      />
-    ) : (
-      <RegisterPage
-        onNavigateToLogin={() => {
-          setAuthView('login');
+        onNavigateToVerifyEmail={(email) => {
+          setPendingVerificationEmail(email);
+          setAuthView('verify-email');
         }}
+        initialMessage={loginNotice}
       />
     );
   }
@@ -228,4 +260,3 @@ export default function App() {
     </ThemeProvider>
   );
 }
-

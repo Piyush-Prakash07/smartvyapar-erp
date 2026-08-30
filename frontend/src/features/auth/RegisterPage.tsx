@@ -17,10 +17,14 @@ import {
 } from 'lucide-react';
 
 interface RegisterPageProps {
-  onNavigateToLogin: () => void;
+  onNavigateToLogin: (message?: string) => void;
+  onNavigateToVerifyEmail?: (email: string) => void;
 }
 
-export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
+export default function RegisterPage({
+  onNavigateToLogin,
+  onNavigateToVerifyEmail,
+}: RegisterPageProps) {
   const { register } = useAuth();
 
   // Registration fields
@@ -58,16 +62,24 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
     setError('');
 
     try {
-      await register({
+      const normalizedEmail = email.trim() || undefined;
+      const res = await register({
         companyName: companyName.trim(),
         fullName: fullName.trim(),
-        email: email.trim() || undefined,
+        email: normalizedEmail,
         phone: phone.trim() || undefined,
         password,
         gstin: gstin.trim() || undefined,
         address: address.trim() || undefined,
       });
-      // AuthContext handleAuthSuccess sets session and automatically routes user to dashboard
+
+      if (res.requiresEmailVerification) {
+        if (onNavigateToVerifyEmail) {
+          onNavigateToVerifyEmail(res.email || email.trim());
+        } else {
+          onNavigateToLogin('Registration successful! Please check your email to verify your account.');
+        }
+      }
     } catch (err: unknown) {
       let message = 'Registration failed. Please check your inputs and try again.';
       if (
@@ -118,7 +130,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
               Register Business <Sparkles className="w-5 h-5 text-indigo-400" />
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Provide your details below to activate your business ERP immediately
+              Provide your details below to activate your business ERP
             </p>
           </div>
 
@@ -177,7 +189,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
               {/* Email Address */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-                  Email Address
+                  Email Address <span className="text-indigo-400 text-[10px] lowercase">(requires OTP verification)</span>
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
@@ -281,7 +293,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
             </div>
 
             <p className="text-[11px] text-slate-400">
-              * At least one contact method (Email or Mobile Number) is required to identify your account.
+              * A 6-digit verification code will be sent to your email address to complete registration.
             </p>
 
             {/* Submit Button */}
@@ -293,11 +305,11 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Creating Account...
+                  Registering Business...
                 </>
               ) : (
                 <>
-                  Create Account & Access ERP
+                  Register &amp; Verify Email
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -310,7 +322,7 @@ export default function RegisterPage({ onNavigateToLogin }: RegisterPageProps) {
               Already have an account?{' '}
               <button
                 type="button"
-                onClick={onNavigateToLogin}
+                onClick={() => onNavigateToLogin()}
                 className="font-medium text-indigo-400 hover:text-indigo-300 transition-colors inline-flex items-center gap-1"
               >
                 Sign in to your business <ArrowRight className="w-3.5 h-3.5" />

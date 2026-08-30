@@ -41,12 +41,29 @@ export interface RegisterDto {
   address?: string;
 }
 
+export interface VerifyEmailDto {
+  email: string;
+  otp: string;
+}
+
+export interface ResendOtpDto {
+  email: string;
+}
+
+export interface VerifyEmailResponse {
+  message: string;
+  success?: boolean;
+  alreadyVerified?: boolean;
+}
+
 export interface AuthResponse {
-  user: User;
+  user?: User;
   company?: CompanyWithRole;
-  companies: CompanyWithRole[];
-  accessToken: string;
+  companies?: CompanyWithRole[];
+  accessToken?: string;
   message?: string;
+  requiresEmailVerification?: boolean;
+  email?: string;
 }
 
 export interface UserProfileResponse {

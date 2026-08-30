@@ -13,6 +13,8 @@ import * as express from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CompaniesService } from '../companies/companies.service';
 
@@ -41,10 +43,28 @@ export class AuthController {
     @Res({ passthrough: true }) res: express.Response,
   ) {
     const result = await this.authService.register(dto);
-    this.setRefreshTokenCookie(res, result.refreshToken);
 
-    delete (result as { refreshToken?: string }).refreshToken;
+    if (result.requiresEmailVerification) {
+      return result;
+    }
+
+    if (result.refreshToken) {
+      this.setRefreshTokenCookie(res, result.refreshToken);
+      delete (result as { refreshToken?: string }).refreshToken;
+    }
     return result;
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Post('verify-email')
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
+  @Post('resend-verification-otp')
+  async resendVerificationOtp(@Body() dto: ResendOtpDto) {
+    return this.authService.resendVerificationOtp(dto);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60000 } })

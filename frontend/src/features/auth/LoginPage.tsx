@@ -4,6 +4,7 @@ import {
   Landmark,
   Sparkles,
   AlertCircle,
+  CheckCircle2,
   ArrowRight,
   Lock,
   UserCheck,
@@ -13,9 +14,15 @@ import {
 
 interface LoginPageProps {
   onNavigateToRegister: () => void;
+  onNavigateToVerifyEmail?: (email: string) => void;
+  initialMessage?: string;
 }
 
-export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
+export default function LoginPage({
+  onNavigateToRegister,
+  onNavigateToVerifyEmail,
+  initialMessage,
+}: LoginPageProps) {
   const { login } = useAuth();
 
   // Input states
@@ -25,6 +32,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
 
   // Status states
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState(initialMessage || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,6 +44,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
 
     setIsSubmitting(true);
     setError('');
+    setInfoMessage('');
 
     try {
       await login({
@@ -44,6 +53,9 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
       });
     } catch (err: unknown) {
       let message = 'Login failed. Please check your credentials and try again.';
+      let requiresVerification = false;
+      let userEmail = identifier.includes('@') ? identifier.trim() : '';
+
       if (
         err &&
         typeof err === 'object' &&
@@ -52,11 +64,25 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
         typeof err.response === 'object' &&
         'data' in err.response &&
         err.response.data &&
-        typeof err.response.data === 'object' &&
-        'message' in err.response.data
+        typeof err.response.data === 'object'
       ) {
-        message = String(err.response.data.message);
+        const data = err.response.data as Record<string, unknown>;
+        if (data.message) {
+          message = String(data.message);
+        }
+        if (data.requiresEmailVerification === true) {
+          requiresVerification = true;
+          if (data.email && typeof data.email === 'string') {
+            userEmail = data.email;
+          }
+        }
       }
+
+      if (requiresVerification && onNavigateToVerifyEmail) {
+        onNavigateToVerifyEmail(userEmail);
+        return;
+      }
+
       setError(message);
     } finally {
       setIsSubmitting(false);
@@ -81,7 +107,7 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
           </div>
         </div>
         <p className="text-center text-sm text-slate-400">
-          Smart Business & GST Accounting Platform
+          Smart Business &amp; GST Accounting Platform
         </p>
       </div>
 
@@ -95,6 +121,14 @@ export default function LoginPage({ onNavigateToRegister }: LoginPageProps) {
               Sign in with your registered email address or 10-digit mobile number
             </p>
           </div>
+
+          {/* Success / Info Message */}
+          {infoMessage && (
+            <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm flex items-start gap-3 animate-fade-in">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex-1">{infoMessage}</div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

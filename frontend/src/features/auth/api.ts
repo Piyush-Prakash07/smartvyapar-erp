@@ -4,6 +4,9 @@ import type {
   RegisterDto,
   AuthResponse,
   UserProfileResponse,
+  VerifyEmailDto,
+  ResendOtpDto,
+  VerifyEmailResponse,
 } from './types';
 
 export const loginUser = async (data: LoginDto): Promise<AuthResponse> => {
@@ -13,6 +16,23 @@ export const loginUser = async (data: LoginDto): Promise<AuthResponse> => {
 
 export const registerUser = async (data: RegisterDto): Promise<AuthResponse> => {
   const res = await api.post<AuthResponse>('/auth/register', data);
+  return res.data;
+};
+
+export const verifyEmail = async (
+  data: VerifyEmailDto,
+): Promise<VerifyEmailResponse> => {
+  const res = await api.post<VerifyEmailResponse>('/auth/verify-email', data);
+  return res.data;
+};
+
+export const resendVerificationOtp = async (
+  data: ResendOtpDto,
+): Promise<VerifyEmailResponse> => {
+  const res = await api.post<VerifyEmailResponse>(
+    '/auth/resend-verification-otp',
+    data,
+  );
   return res.data;
 };
 

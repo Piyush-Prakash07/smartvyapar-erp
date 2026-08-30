@@ -1251,6 +1251,29 @@ export default function KhataPage() {
                                 ) : null}
 
                                 <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewingDocItems({
+                                      inv,
+                                      logData,
+                                      itemsList,
+                                      isReturn: isSaleReturn,
+                                      docTypeTitle: isSaleReturn ? '🔄 Customer Sales Return (Credit Note)' : '📄 Sales Invoice',
+                                      partyName: (activeParty as Customer).name,
+                                    });
+                                  }}
+                                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded border shadow-2xs transition-all cursor-pointer ${
+                                    isSaleReturn 
+                                      ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100' 
+                                      : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                                  }`}
+                                  title={isSaleReturn ? 'View what items customer returned' : 'View line items'}
+                                >
+                                  <Eye size={11} className={isSaleReturn ? 'text-purple-600' : 'text-[#004870]'} />
+                                  {isSaleReturn ? 'Returned' : 'Items'}
+                                </button>
+
+                                <button
                                   onClick={() => {
                                     const log = logData;
                                     const upiId = localStorage.getItem('smartvyapar_upi_id') || '';
@@ -1521,6 +1544,29 @@ export default function KhataPage() {
                                     </button>
                                   )
                                 ) : null}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setViewingDocItems({
+                                      inv,
+                                      logData,
+                                      itemsList,
+                                      isReturn: isPurchaseReturn,
+                                      docTypeTitle: isPurchaseReturn ? '↩️ Supplier Purchase Return (Debit Note)' : '📦 Purchase Invoice',
+                                      partyName: (activeParty as Mahajan).name,
+                                    });
+                                  }}
+                                  className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded border shadow-2xs transition-all cursor-pointer ${
+                                    isPurchaseReturn 
+                                      ? 'bg-rose-50 text-rose-800 border-rose-300 hover:bg-rose-100' 
+                                      : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100'
+                                  }`}
+                                  title={isPurchaseReturn ? 'View what goods were returned to supplier' : 'View line items'}
+                                >
+                                  <Eye size={11} className={isPurchaseReturn ? 'text-rose-600' : 'text-orange-600'} />
+                                  {isPurchaseReturn ? 'Returned' : 'Items'}
+                                </button>
 
                                 <button
                                   onClick={() => {

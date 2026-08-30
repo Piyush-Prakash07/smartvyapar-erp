@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS "emailVerificationOtpHash" TEXT,
+ADD COLUMN IF NOT EXISTS "emailVerificationExpiry" TIMESTAMP(3),
+ADD COLUMN IF NOT EXISTS "emailVerificationAttempts" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN IF NOT EXISTS "emailVerificationLastSentAt" TIMESTAMP(3);

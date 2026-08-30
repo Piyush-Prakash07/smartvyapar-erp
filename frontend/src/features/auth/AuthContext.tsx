@@ -5,6 +5,7 @@ import type {
   CompanyWithRole,
   LoginDto,
   RegisterDto,
+  AuthResponse,
 } from './types';
 import {
   loginUser,
@@ -20,8 +21,8 @@ interface AuthContextType {
   activeCompany: CompanyWithRole | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: LoginDto) => Promise<void>;
-  register: (data: RegisterDto) => Promise<void>;
+  login: (data: LoginDto) => Promise<AuthResponse>;
+  register: (data: RegisterDto) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   switchCompany: (companyId: string) => void;
 }
@@ -69,20 +70,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(false);
   };
 
-  const login = async (data: LoginDto) => {
+  const login = async (data: LoginDto): Promise<AuthResponse> => {
     try {
       const result = await loginUser(data);
-      handleAuthSuccess(result.user, result.companies, result.accessToken);
+      if (result.user && result.accessToken) {
+        handleAuthSuccess(result.user, result.companies || [], result.accessToken);
+      }
+      return result;
     } catch (err) {
       clearAuth();
       throw err;
     }
   };
 
-  const register = async (data: RegisterDto) => {
+  const register = async (data: RegisterDto): Promise<AuthResponse> => {
     try {
       const result = await registerUser(data);
-      handleAuthSuccess(result.user, result.companies, result.accessToken);
+      if (result.user && result.accessToken) {
+        handleAuthSuccess(result.user, result.companies || [], result.accessToken);
+      }
+      return result;
     } catch (err) {
       clearAuth();
       throw err;

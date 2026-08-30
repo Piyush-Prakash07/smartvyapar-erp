@@ -25,22 +25,27 @@ enum Role {
 }
 
 model User {
-  id               String        @id @default(uuid())
-  email            String?       @unique
-  phone            String?       @unique
-  passwordHash     String?
-  fullName         String?
-  status           String        @default("PENDING_VERIFICATION") // "PENDING_VERIFICATION", "ACTIVE", "INACTIVE"
-  isEmailVerified  Boolean       @default(false)
-  isPhoneVerified  Boolean       @default(false)
-  emailOtp         String?
-  emailOtpExpires  DateTime?
-  phoneOtp         String?
-  phoneOtpExpires  DateTime?
-  refreshTokenHash String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  companyUsers     CompanyUser[]
+  id                          String        @id @default(uuid())
+  email                       String?       @unique
+  phone                       String?       @unique
+  passwordHash                String?
+  fullName                    String?
+  status                      String        @default("PENDING_VERIFICATION") // "PENDING_VERIFICATION", "ACTIVE", "INACTIVE"
+  emailVerified               Boolean       @default(false)
+  isEmailVerified             Boolean       @default(false)
+  isPhoneVerified             Boolean       @default(false)
+  emailOtp                    String?
+  emailOtpExpires             DateTime?
+  emailVerificationOtpHash    String?
+  emailVerificationExpiry     DateTime?
+  emailVerificationAttempts   Int           @default(0)
+  emailVerificationLastSentAt DateTime?
+  phoneOtp                    String?
+  phoneOtpExpires             DateTime?
+  refreshTokenHash            String?
+  createdAt                   DateTime      @default(now())
+  updatedAt                   DateTime      @updatedAt
+  companyUsers                CompanyUser[]
 }
 
 model Company {
