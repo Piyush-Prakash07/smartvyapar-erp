@@ -1,0 +1,258 @@
+// SmartVyapar ERP Prisma Schema
+// Learn more in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model SystemHealth {
+  id        String   @id @default(uuid())
+  status    String
+  checkedAt DateTime @default(now())
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  ACCOUNTANT
+  CASHIER
+  INVENTORY_MANAGER
+  SALES_MANAGER
+}
+
+model User {
+  id               String        @id @default(uuid())
+  email            String?       @unique
+  phone            String?       @unique
+  passwordHash     String?
+  fullName         String?
+  status           String        @default("PENDING_VERIFICATION") // "PENDING_VERIFICATION", "ACTIVE", "INACTIVE"
+  isEmailVerified  Boolean       @default(false)
+  isPhoneVerified  Boolean       @default(false)
+  emailOtp         String?
+  emailOtpExpires  DateTime?
+  phoneOtp         String?
+  phoneOtpExpires  DateTime?
+  refreshTokenHash String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  companyUsers     CompanyUser[]
+}
+
+model Company {
+  id               String            @id @default(uuid())
+  name             String
+  gstin            String?
+  address          String?
+  phone            String?
+  email            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  companyUsers     CompanyUser[]
+  items            Item[]
+  customers        Customer[]
+  invoices         Invoice[]
+  mahajans         Mahajan[]
+  purchaseInvoices PurchaseInvoice[]
+  stockAdjustments StockAdjustment[]
+  storeSubparts    StoreSubpart[]
+}
+
+model CompanyUser {
+  id        String   @id @default(uuid())
+  companyId String
+  userId    String
+  role      Role     @default(OWNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, userId])
+}
+
+model Item {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String
+  rate        Float
+  cost        Float    @default(0)
+  mrp         Float    @default(0)
+  hsn         String   @default("21069099")
+  unit        String   @default("PCS")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  stockAdjustments StockAdjustment[]
+
+  @@unique([companyId, name])
+}
+
+model Customer {
+  id          String    @id @default(uuid())
+  companyId   String
+  name        String
+  gstin       String?
+  email       String?
+  phone       String?
+  address     String?
+  state       String?
+  stateCode   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company     Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+
+  @@unique([companyId, name])
+}
+
+model Invoice {
+  id            String    @id @default(uuid())
+  companyId     String
+  customerId    String?
+  invoiceNo     String
+  invoiceDate   DateTime
+  totalAmount   Float
+  paidAmount    Float     @default(0)
+  payments      Payment[]
+  subtotal      Float
+  totalGst      Float
+  isInterstate  Boolean
+  logisticsData String
+  itemsData     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, invoiceDate])
+  @@index([companyId, customerId])
+}
+
+model Mahajan {
+  id               String            @id @default(uuid())
+  companyId        String
+  name             String
+  gstin            String?
+  email            String?
+  phone            String?
+  address          String?
+  state            String?
+  stateCode        String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchaseInvoices PurchaseInvoice[]
+
+  @@unique([companyId, name])
+}
+
+model PurchaseInvoice {
+  id             String        @id @default(uuid())
+  companyId      String
+  mahajanId      String?
+  buyerSubpartId String?
+  invoiceNo      String
+  invoiceDate    DateTime
+  totalAmount    Float
+  paidAmount     Float         @default(0)
+  payments       Payment[]
+  subtotal       Float
+  totalGst       Float
+  isInterstate   Boolean
+  logisticsData  String
+  itemsData      String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  mahajan        Mahajan?      @relation(fields: [mahajanId], references: [id], onDelete: SetNull)
+  buyerSubpart   StoreSubpart? @relation(fields: [buyerSubpartId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, invoiceDate])
+  @@index([companyId, mahajanId])
+}
+
+model StoreSubpart {
+  id               String            @id @default(uuid())
+  companyId        String
+  name             String
+  code             String?
+  gstin            String?
+  address          String?
+  phone            String?
+  state            String?
+  stateCode        String?
+  isDefault        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  company          Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  purchaseInvoices PurchaseInvoice[]
+  stockAdjustments StockAdjustment[]
+
+  @@unique([companyId, name])
+}
+
+model Payment {
+  id                     String           @id @default(uuid())
+  invoiceId              String?
+  purchaseInvoiceId      String?
+  amount                 Float
+  date                   DateTime
+  paymentMethod          String?          @default("CASH")
+  paymentStatus          String?          @default("COMPLETED")
+  referenceNumber        String?
+  provider               String?
+  bankName               String?
+  transferType           String?
+  maskedAccountReference String?
+  paymentSubType         String?
+  senderMobileMasked     String?
+  receiverMobileMasked   String?
+  cardLastFour           String?
+  cardType               String?
+  chequeNumber           String?
+  chequeDate             DateTime?
+  receiptNumber          String?
+  receivedBy             String?
+  notes                  String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+
+  invoice                Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  purchaseInvoice        PurchaseInvoice? @relation(fields: [purchaseInvoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([purchaseInvoiceId])
+}
+
+model StockAdjustment {
+  id             String        @id @default(uuid())
+  companyId      String
+  itemId         String
+  buyerSubpartId String?
+  date           DateTime // Store as start of calendar day (00:00:00.000 UTC)
+  quantity       Float    // Delta adjustment (+/-)
+  note           String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  company        Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  item           Item          @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  buyerSubpart   StoreSubpart? @relation(fields: [buyerSubpartId], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, itemId, date])
+  @@index([companyId, date])
+}
+

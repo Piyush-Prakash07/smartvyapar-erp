@@ -1,0 +1,15 @@
+{
+  "env": {
+    "browser": true,
+    "es2024": true,
+    "node": true
+  },
+  "plugins": ["react", "unicorn", "typescript"],
+  "rules": {
+    "no-unused-vars": "off",
+    "no-undef": "off",
+    "react/set-state-in-effect": "off",
+    "react/purity": "off",
+    "react-hooks/exhaustive-deps": "off"
+  }
+}
