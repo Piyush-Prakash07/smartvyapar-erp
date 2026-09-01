@@ -53,6 +53,7 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
   // 1. Formal Standard Header
   const isSaleReturn = data.docType === 'sale_return' || data.docType === 'credit_note';
   const isPurchaseReturn = data.docType === 'purchase_return' || data.docType === 'debit_note';
+  const isReturnDoc = isSaleReturn || isPurchaseReturn;
   const pdfTitle = isSaleReturn ? 'CREDIT NOTE' : isPurchaseReturn ? 'DEBIT NOTE' : (data.docType === 'purchase' ? 'PURCHASE INVOICE' : 'SALE INVOICE');
   const pdfSubtitle = isSaleReturn 
     ? 'ORIGINAL FOR RECIPIENT / (ISSUED UNDER SECTION 34 OF CGST ACT - SALE RETURN)' 
@@ -123,7 +124,13 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
     rightY += 4.5;
   }
   if (data.sellerState || data.sellerStateCode) {
-    pdf.text(`State: ${data.sellerState || 'Assam'} (${data.sellerStateCode || '18'})`, margin + 118, rightY);
+    let sStr = 'State: ';
+    if (data.sellerState && data.sellerStateCode) {
+      sStr += `${data.sellerState} (${data.sellerStateCode})`;
+    } else {
+      sStr += data.sellerState || data.sellerStateCode || '';
+    }
+    pdf.text(sStr, margin + 118, rightY);
   }
 
   curY += sellerHeight;
@@ -131,7 +138,8 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
   pdf.line(margin, curY, rightEdge, curY);
 
   // 3. Invoice & Logistics Metadata Grid (4 Columns x 2 Separate Rows)
-  const metaHeight = (data.originalInvoiceNo || data.reasonForReturn) ? 24 : 18;
+  const showReturnRow = isReturnDoc && (!!data.originalInvoiceNo || !!data.reasonForReturn);
+  const metaHeight = showReturnRow ? 24 : 18;
   const colW = contentWidth / 4; // 47.5mm
 
   // Row 1 (y = curY to curY + 9)
@@ -182,8 +190,8 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
   pdf.text((data.station || 'N/A').slice(0, 20), margin + colW * 2 + 3, curY + 16.5);
   pdf.text((data.freightAmt || 'FREIGHT TO PAY').slice(0, 20), margin + colW * 3 + 3, curY + 16.5);
 
-  // Optional Row 3: Return Reference and Reason
-  if (data.originalInvoiceNo || data.reasonForReturn) {
+  // Optional Row 3: Return Reference and Reason (ONLY for Return documents)
+  if (showReturnRow) {
     pdf.setDrawColor(230, 235, 242);
     pdf.line(margin, curY + 18, rightEdge, curY + 18);
 
@@ -242,8 +250,18 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
   pdf.setTextColor(30, 41, 59);
   let bGstStr = `GSTIN / UIN: ${data.buyerGSTIN || 'N/A'}`;
   pdf.text(bGstStr, margin + 118, curY + 6.5);
-  let bStateStr = `State / Code: ${data.buyerState || ''} (${data.buyerStateCode || ''})`;
-  pdf.text(bStateStr, margin + 118, curY + 11.5);
+  
+  let bStateStr = '';
+  if (data.buyerState && data.buyerStateCode) {
+    bStateStr = `State / Code: ${data.buyerState} (${data.buyerStateCode})`;
+  } else if (data.buyerState) {
+    bStateStr = `State: ${data.buyerState}`;
+  } else if (data.buyerStateCode) {
+    bStateStr = `State Code: ${data.buyerStateCode}`;
+  }
+  if (bStateStr) {
+    pdf.text(bStateStr, margin + 118, curY + 11.5);
+  }
 
   curY += buyerHeight;
   pdf.setDrawColor(30, 41, 59);
@@ -296,7 +314,7 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
       label: 'PACKING',
       preferredWidth: 16,
       align: 'center',
-      render: (it) => String(it.packing || 'BAG'),
+      render: (it) => String(it.packing || it.unit || ''),
     });
   }
 
@@ -696,57 +714,67 @@ export async function generateDirectInvoicePdfBlob(data: InvoiceTemplateData): P
   const tsCol3 = tsCol2 + 25;  // 175
   const tsEnd = rightEdge;     // 200
 
+  const breakdownEntries = Object.entries(gstBreakdownMap);
+  // Sort tax slabs in ascending rate order (e.g. 5%, 12%, 18%, 28%)
+  breakdownEntries.sort(([a], [b]) => Number(a) - Number(b));
+
+  const numSlabRows = Math.max(1, breakdownEntries.length);
+  const tsRowH = 3.5;
+  const tsHeaderH = 4.5;
+  const tsTotalH = 4.0;
+  const taxTableH = tsHeaderH + (numSlabRows * tsRowH) + tsTotalH;
+
   pdf.setDrawColor(30, 41, 59);
   pdf.setLineWidth(0.3);
-  pdf.rect(tsCol1, taxSlabStartY, taxSlabW, 16);
+  pdf.rect(tsCol1, taxSlabStartY, taxSlabW, taxTableH);
 
   // Tax Slab Table Header
   pdf.setFillColor(245, 247, 250);
-  pdf.rect(tsCol1, taxSlabStartY, taxSlabW, 4.5, 'F');
+  pdf.rect(tsCol1, taxSlabStartY, taxSlabW, tsHeaderH, 'F');
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(6.5);
   pdf.setTextColor(15, 23, 42);
   pdf.text('TAX SLAB', tsCol1 + 11, taxSlabStartY + 3.2, { align: 'center' });
   pdf.text('TAXABLE VAL', tsCol2 + 23, taxSlabStartY + 3.2, { align: 'right' });
   pdf.text(data.isInterstate ? 'IGST' : 'CGST+SGST', tsCol3 + 23, taxSlabStartY + 3.2, { align: 'right' });
-  pdf.line(tsCol1, taxSlabStartY + 4.5, tsEnd, taxSlabStartY + 4.5);
+  pdf.line(tsCol1, taxSlabStartY + tsHeaderH, tsEnd, taxSlabStartY + tsHeaderH);
 
-  // Tax Slab Rows
-  let tRowY = taxSlabStartY + 8;
-  const breakdownEntries = Object.entries(gstBreakdownMap);
+  // Tax Slab Rows (Include ALL tax slabs)
+  let tRowY = taxSlabStartY + tsHeaderH;
   if (breakdownEntries.length === 0) {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(6.5);
-    pdf.text('5%', tsCol1 + 11, tRowY, { align: 'center' });
-    pdf.text(subtotal.toFixed(2), tsCol2 + 23, tRowY, { align: 'right' });
-    pdf.text(totalGst.toFixed(2), tsCol3 + 23, tRowY, { align: 'right' });
+    pdf.text('5%', tsCol1 + 11, tRowY + 2.5, { align: 'center' });
+    pdf.text(subtotal.toFixed(2), tsCol2 + 23, tRowY + 2.5, { align: 'right' });
+    pdf.text(totalGst.toFixed(2), tsCol3 + 23, tRowY + 2.5, { align: 'right' });
+    tRowY += tsRowH;
   } else {
-    breakdownEntries.slice(0, 2).forEach(([rKey, val]) => {
+    breakdownEntries.forEach(([rKey, val]) => {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(6.5);
-      pdf.text(`${rKey}%`, tsCol1 + 11, tRowY, { align: 'center' });
-      pdf.text(val.base.toFixed(2), tsCol2 + 23, tRowY, { align: 'right' });
-      pdf.text(val.gst.toFixed(2), tsCol3 + 23, tRowY, { align: 'right' });
-      tRowY += 3.5;
+      pdf.text(`${rKey}%`, tsCol1 + 11, tRowY + 2.5, { align: 'center' });
+      pdf.text(val.base.toFixed(2), tsCol2 + 23, tRowY + 2.5, { align: 'right' });
+      pdf.text(val.gst.toFixed(2), tsCol3 + 23, tRowY + 2.5, { align: 'right' });
+      tRowY += tsRowH;
     });
   }
 
   // Tax Slab Total Row
   pdf.setFillColor(245, 247, 250);
-  pdf.rect(tsCol1, taxSlabStartY + 12, taxSlabW, 4, 'F');
-  pdf.line(tsCol1, taxSlabStartY + 12, tsEnd, taxSlabStartY + 12);
+  pdf.rect(tsCol1, tRowY, taxSlabW, tsTotalH, 'F');
+  pdf.line(tsCol1, tRowY, tsEnd, tRowY);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(6.5);
-  pdf.text('Total', tsCol1 + 11, taxSlabStartY + 15, { align: 'center' });
-  pdf.text(subtotal.toFixed(2), tsCol2 + 23, taxSlabStartY + 15, { align: 'right' });
-  pdf.text(totalGst.toFixed(2), tsCol3 + 23, taxSlabStartY + 15, { align: 'right' });
+  pdf.text('Total', tsCol1 + 11, tRowY + 2.8, { align: 'center' });
+  pdf.text(subtotal.toFixed(2), tsCol2 + 23, tRowY + 2.8, { align: 'right' });
+  pdf.text(totalGst.toFixed(2), tsCol3 + 23, tRowY + 2.8, { align: 'right' });
 
   // Draw Vertical lines in Tax Slab Table
-  pdf.line(tsCol2, taxSlabStartY, tsCol2, taxSlabStartY + 16);
-  pdf.line(tsCol3, taxSlabStartY, tsCol3, taxSlabStartY + 16);
+  pdf.line(tsCol2, taxSlabStartY, tsCol2, taxSlabStartY + taxTableH);
+  pdf.line(tsCol3, taxSlabStartY, tsCol3, taxSlabStartY + taxTableH);
 
   // 9. Signatures Block (Inside Right Column, beneath Tax Slab Table)
-  const sigY = lowerY + 24;
+  const sigY = Math.max(lowerY + 22, taxSlabStartY + taxTableH + 5);
 
   // Receiver Signature (Left side of right column)
   pdf.setFont('helvetica', 'normal');

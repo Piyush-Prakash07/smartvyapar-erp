@@ -131,7 +131,7 @@ export default function InvoicePrintTemplate({ data, id = 'whatsapp-modal-tax-in
   ];
 
   if (hasPacking) {
-    columns.push({ id: 'packing', label: 'Packing', headerClass: 'w-14 text-center', cellClass: 'text-center text-slate-700', render: (it) => it.packing || 'BAG' });
+    columns.push({ id: 'packing', label: 'Packing', headerClass: 'w-14 text-center', cellClass: 'text-center text-slate-700', render: (it) => it.packing || it.unit || '' });
   }
   if (hasPcsPerUnit) {
     columns.push({ id: 'pcsPerUnit', label: 'Pcs/Unit', headerClass: 'w-12 text-center', cellClass: 'text-center font-bold text-slate-800', render: (it) => it.conversionFactor || 1 });
@@ -201,7 +201,12 @@ export default function InvoicePrintTemplate({ data, id = 'whatsapp-modal-tax-in
           {data.sellerFssai && <div><span className="font-bold">FSSAI Lic: </span><span className="font-mono">{data.sellerFssai}</span></div>}
           {data.sellerPAN && <div><span className="font-bold">PAN: </span><span className="font-mono">{data.sellerPAN}</span></div>}
           {data.sellerGSTIN && <div><span className="font-bold">GSTIN: </span><span className="font-mono font-bold">{data.sellerGSTIN}</span></div>}
-          {(data.sellerState || data.sellerStateCode) && <div><span className="font-bold">State: </span>{data.sellerState} ({data.sellerStateCode || ''})</div>}
+          {(data.sellerState || data.sellerStateCode) && (
+            <div>
+              <span className="font-bold">State: </span>
+              {data.sellerState && data.sellerStateCode ? `${data.sellerState} (${data.sellerStateCode})` : (data.sellerState || data.sellerStateCode)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -212,7 +217,7 @@ export default function InvoicePrintTemplate({ data, id = 'whatsapp-modal-tax-in
         <div className="col-span-3 p-1.5 space-y-0.5"><span className="font-bold block text-[8px] text-slate-500 uppercase">Reverse Charge</span><span className="font-bold">{data.reverseCharge || 'N'}</span><div className="font-medium">{data.freightAmt || 'FREIGHT TO PAY'}</div></div>
       </div>
 
-      {(data.originalInvoiceNo || data.reasonForReturn) && (
+      {(isSaleReturn || isPurchaseReturn) && (data.originalInvoiceNo || data.reasonForReturn) && (
         <div className="grid grid-cols-12 border-b border-slate-900 bg-amber-50/60 p-2 text-[8.5px] text-left">
           <div className="col-span-6 space-x-1">
             <span className="font-black text-amber-900 uppercase text-[8px]">Original Invoice Ref: </span>
@@ -234,7 +239,15 @@ export default function InvoicePrintTemplate({ data, id = 'whatsapp-modal-tax-in
         <span className="font-black text-[9px] text-[#004870] uppercase block mb-1">Billed to / Customer Details :</span>
         <div className="text-[12px] font-black text-slate-900">{data.buyerName || 'Valued Customer'}</div>
         <div className="text-[9px] text-slate-600 leading-tight whitespace-pre-wrap font-medium">{data.buyerAddress}</div>
-        <div className="flex flex-wrap gap-4 text-[9px] pt-1 text-slate-800"><div><span className="font-bold">GSTIN: </span>{data.buyerGSTIN || 'N/A'}</div><div><span className="font-bold">State: </span>{data.buyerState || ''} ({data.buyerStateCode || ''})</div></div>
+        <div className="flex flex-wrap gap-4 text-[9px] pt-1 text-slate-800">
+          <div><span className="font-bold">GSTIN: </span>{data.buyerGSTIN || 'N/A'}</div>
+          {(data.buyerState || data.buyerStateCode) && (
+            <div>
+              <span className="font-bold">State: </span>
+              {data.buyerState && data.buyerStateCode ? `${data.buyerState} (${data.buyerStateCode})` : (data.buyerState || data.buyerStateCode)}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="w-full">

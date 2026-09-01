@@ -87,7 +87,7 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
   const [invoiceMode, setInvoiceMode] = useState<'sales' | 'purchase' | 'sale_return' | 'purchase_return'>('sales');
   const [originalInvoiceNo, setOriginalInvoiceNo] = useState('');
   const [originalInvoiceDate, setOriginalInvoiceDate] = useState('');
-  const [reasonForReturn, setReasonForReturn] = useState('Damaged / Defective Goods');
+  const [reasonForReturn, setReasonForReturn] = useState('');
 
   // Settings and Catalog Items for Prefill
   const [catalogItems, setCatalogItems] = useState<Item[]>([]);
@@ -240,10 +240,11 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
       hsn: '21069099',
       rate: 0,
       quantity: 1,
-      unit: 'CTN',
+      packing: '',
+      unit: '',
+      unit1: '',
       gstRate: 5,
       mrp: 0,
-      unit1: 'CTN',
       unit2: 'PCS',
       conversionFactor: 1,
       looseQty: 0,
@@ -421,8 +422,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
       setSellerAddress(activeCompany?.address || '');
       setSellerPhone(activeCompany?.phone || '');
       setSellerEmail(activeCompany?.email || '');
-      setSellerState('Assam'); // Default standard state
-      setSellerStateCode('18');
+      setSellerState('');
+      setSellerStateCode('');
     }
   }, [activeCompany, invoiceMode]);
 
@@ -559,10 +560,11 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
         hsn: '21069099',
         rate: 0,
         quantity: 1,
-        unit: 'CTN',
+        packing: '',
+        unit: '',
         gstRate: 5,
         mrp: 0,
-        unit1: 'CTN',
+        unit1: '',
         unit2: 'PCS',
         conversionFactor: 1,
         looseQty: 0,
@@ -624,9 +626,9 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
             rate: catalogItem.rate,
             hsn: catalogItem.hsn || '21069099',
             packing: catalogItem.unit || '',
-            unit: catalogItem.unit || item.unit || 'CTN',
+            unit: catalogItem.unit || item.unit || '',
             mrp: catalogItem.mrp || 0,
-            unit1: item.unit1 || 'CTN',
+            unit1: item.unit1 || '',
             unit2: item.unit2 || 'PCS',
             conversionFactor: factor,
             volDisc1: 0,
@@ -684,10 +686,10 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
               rate: 0,
               quantity: 1,
               packing: '',
-              unit: 'CTN',
+              unit: '',
               gstRate: 5,
               mrp: 0,
-              unit1: 'CTN',
+              unit1: '',
               unit2: 'PCS',
               conversionFactor: 1,
               looseQty: 0,
@@ -717,7 +719,10 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
   };
 
   // Tax check logic
-  const isInterstate = sellerStateCode.trim() !== buyerStateCode.trim();
+  const isInterstate = Boolean(
+    (sellerStateCode.trim() && buyerStateCode.trim() && sellerStateCode.trim() !== buyerStateCode.trim()) ||
+    (!sellerStateCode.trim() && !buyerStateCode.trim() && sellerState.trim() && buyerState.trim() && sellerState.trim().toLowerCase() !== buyerState.trim().toLowerCase())
+  );
 
   // ── Calculations — all delegated to the centralised engine ───────────────────
   const calculateTotalQty = () =>
@@ -782,8 +787,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
       setBuyerGSTIN(created.gstin || activeCompany?.gstin || '');
       setBuyerAddress(created.address || activeCompany?.address || '');
       setBuyerPhone(created.phone || activeCompany?.phone || '');
-      setBuyerState(created.state || 'Assam');
-      setBuyerStateCode(created.stateCode || '18');
+      setBuyerState(created.state || '');
+      setBuyerStateCode(created.stateCode || '');
       setShowAddSubpartModal(false);
     } catch (err: any) {
       setSubpartError(err.response?.data?.message || 'Failed to create store subpart');
@@ -798,12 +803,13 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
     setArchiveError(null);
     setArchiveSuccess(null);
 
+    const isReturnDoc = invoiceMode === 'sale_return' || invoiceMode === 'purchase_return';
     const logisticsPayload = {
       docType: invoiceMode,
-      returnStatus: (invoiceMode === 'sale_return' || invoiceMode === 'purchase_return') ? 'PENDING' : 'CONFIRMED',
-      originalInvoiceNo,
-      originalInvoiceDate,
-      reasonForReturn,
+      returnStatus: isReturnDoc ? 'PENDING' : 'CONFIRMED',
+      originalInvoiceNo: isReturnDoc ? (originalInvoiceNo.trim() || undefined) : undefined,
+      originalInvoiceDate: isReturnDoc ? (originalInvoiceDate || undefined) : undefined,
+      reasonForReturn: isReturnDoc ? (reasonForReturn.trim() || undefined) : undefined,
       transport, vehicleNo, station, grRrNo, freightAmt, reverseCharge,
       ewayBillNo, orderNo, orderDate, irn, ackNo, ackDate,
       bankName, bankAccountNo, bankIfsc,
@@ -941,13 +947,14 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
       docType: invoiceMode,
     });
 
+    const isReturnDoc = invoiceMode === 'sale_return' || invoiceMode === 'purchase_return';
     const invoiceData = {
       invoiceNo: invoiceNo || 'Draft',
       invoiceDate,
       docType: invoiceMode,
-      originalInvoiceNo,
-      originalInvoiceDate,
-      reasonForReturn,
+      originalInvoiceNo: isReturnDoc ? (originalInvoiceNo.trim() || undefined) : undefined,
+      originalInvoiceDate: isReturnDoc ? (originalInvoiceDate || undefined) : undefined,
+      reasonForReturn: isReturnDoc ? (reasonForReturn.trim() || undefined) : undefined,
       sellerName,
       sellerAddress,
       sellerGSTIN,
@@ -1075,8 +1082,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                 setSellerGSTIN(activeCompany?.gstin || '');
                 setSellerAddress(activeCompany?.address || '');
                 setSellerPhone(activeCompany?.phone || '');
-                setSellerState('Assam');
-                setSellerStateCode('18');
+                setSellerState('');
+                setSellerStateCode('');
                 setBuyerName('');
                 setBuyerGSTIN('');
                 setBuyerAddress('');
@@ -1104,8 +1111,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                 setSellerGSTIN(activeCompany?.gstin || '');
                 setSellerAddress(activeCompany?.address || '');
                 setSellerPhone(activeCompany?.phone || '');
-                setSellerState('Assam');
-                setSellerStateCode('18');
+                setSellerState('');
+                setSellerStateCode('');
                 setBuyerName('');
                 setBuyerGSTIN('');
                 setBuyerAddress('');
@@ -1142,8 +1149,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                   setBuyerGSTIN(activeCompany?.gstin || '');
                   setBuyerAddress(activeCompany?.address || '');
                   setBuyerPhone(activeCompany?.phone || '');
-                  setBuyerState('Assam');
-                  setBuyerStateCode('18');
+                  setBuyerState('');
+                  setBuyerStateCode('');
                 }
               }}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1174,8 +1181,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                   setBuyerGSTIN(activeCompany?.gstin || '');
                   setBuyerAddress(activeCompany?.address || '');
                   setBuyerPhone(activeCompany?.phone || '');
-                  setBuyerState('Assam');
-                  setBuyerStateCode('18');
+                  setBuyerState('');
+                  setBuyerStateCode('');
                 }
               }}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1483,8 +1490,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                             gstin: activeCompany?.gstin || '',
                             phone: activeCompany?.phone || '',
                             address: activeCompany?.address || '',
-                            state: 'Assam',
-                            stateCode: '18',
+                            state: '',
+                            stateCode: '',
                           });
                           setSubpartError(null);
                           setShowAddSubpartModal(true);
@@ -1515,8 +1522,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                           setSellerAddress(activeCompany?.address || '');
                           setSellerPhone(activeCompany?.phone || '');
                           setSellerEmail(activeCompany?.email || '');
-                          setSellerState('Assam');
-                          setSellerStateCode('18');
+                          setSellerState('');
+                          setSellerStateCode('');
                         } else {
                           const sp = catalogStoreSubparts.find(x => x.id === subId);
                           if (sp) {
@@ -1525,8 +1532,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                             setSellerGSTIN(sp.gstin || activeCompany?.gstin || '');
                             setSellerAddress(sp.address || activeCompany?.address || '');
                             setSellerPhone(sp.phone || activeCompany?.phone || '');
-                            setSellerState(sp.state || 'Assam');
-                            setSellerStateCode(sp.stateCode || '18');
+                            setSellerState(sp.state || '');
+                            setSellerStateCode(sp.stateCode || '');
                           }
                         }
                       }}
@@ -1696,8 +1703,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                             gstin: activeCompany?.gstin || '',
                             phone: activeCompany?.phone || '',
                             address: activeCompany?.address || '',
-                            state: 'Assam',
-                            stateCode: '18',
+                            state: '',
+                            stateCode: '',
                           });
                           setSubpartError(null);
                           setShowAddSubpartModal(true);
@@ -1727,8 +1734,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                           setBuyerAddress(activeCompany?.address || '');
                           setBuyerPhone(activeCompany?.phone || '');
                           setBuyerEmail(activeCompany?.email || '');
-                          setBuyerState('Assam');
-                          setBuyerStateCode('18');
+                          setBuyerState('');
+                          setBuyerStateCode('');
                         } else {
                           const sp = catalogStoreSubparts.find(x => x.id === subId);
                           if (sp) {
@@ -1737,8 +1744,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                             setBuyerGSTIN(sp.gstin || activeCompany?.gstin || '');
                             setBuyerAddress(sp.address || activeCompany?.address || '');
                             setBuyerPhone(sp.phone || activeCompany?.phone || '');
-                            setBuyerState(sp.state || 'Assam');
-                            setBuyerStateCode(sp.stateCode || '18');
+                            setBuyerState(sp.state || '');
+                            setBuyerStateCode(sp.stateCode || '');
                           }
                         }
                       }}
@@ -2221,8 +2228,8 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
               </div>
             </div>
 
-            {/* Return details row */}
-            {(originalInvoiceNo || reasonForReturn) && (
+            {/* Return details row - ONLY for Sales Return and Purchase Return */}
+            {(invoiceMode === 'sale_return' || invoiceMode === 'purchase_return') && (originalInvoiceNo || reasonForReturn) && (
               <div className="grid grid-cols-12 border-b border-slate-900 text-left bg-amber-50/70 p-1.5 text-[8.5px]">
                 <div className="col-span-6 space-x-1">
                   <span className="font-black text-amber-900 uppercase text-[8px]">Original Invoice Ref:</span>
@@ -2270,10 +2277,12 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                   <span className="font-bold text-slate-800">GSTIN / UIN: </span>
                   <span className="font-mono font-bold">{buyerGSTIN || 'N/A'}</span>
                 </div>
-                <div className="text-[9px]">
-                  <span className="font-bold text-slate-800">State / Code: </span>
-                  {buyerState} ({buyerStateCode})
-                </div>
+                {(buyerState || buyerStateCode) ? (
+                  <div className="text-[9px]">
+                    <span className="font-bold text-slate-800">State / Code: </span>
+                    {buyerState && buyerStateCode ? `${buyerState} (${buyerStateCode})` : (buyerState || buyerStateCode)}
+                  </div>
+                ) : null}
                 {buyerPhone && <div className="text-[9px] text-slate-500"><span className="font-bold">Phone: </span>{buyerPhone}</div>}
               </div>
 
@@ -2287,10 +2296,12 @@ export default function InvoiceGeneratorPage({ loadedInvoice, loadedPurchaseInvo
                     <span className="font-bold text-slate-800">GSTIN / UIN: </span>
                     <span className="font-mono font-bold">{shipGSTIN || 'N/A'}</span>
                   </div>
-                  <div className="text-[9px]">
-                    <span className="font-bold text-slate-800">State / Code: </span>
-                    {shipState} ({shipStateCode})
-                  </div>
+                  {(shipState || shipStateCode) ? (
+                    <div className="text-[9px]">
+                      <span className="font-bold text-slate-800">State / Code: </span>
+                      {shipState && shipStateCode ? `${shipState} (${shipStateCode})` : (shipState || shipStateCode)}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
