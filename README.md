@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 # 📊 SmartVyapar ERP — Intelligent Cloud Enterprise & Finance Suite
+=======
+https://smartvyapar-erp-1.onrender.com
+
+# React + Vite
+>>>>>>> e11ca50b1d99615ae86d912f91b9be30be35f114
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19.x-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
